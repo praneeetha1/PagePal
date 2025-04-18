@@ -1,0 +1,9 @@
+streamlit
+python-dotenv
+langchain
+langchain-community
+docx2txt
+PyPDF2
+sentence-transformers
+pinecone-client
+google-generativeai

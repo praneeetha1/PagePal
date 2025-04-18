@@ -1,9 +1,9 @@
-# 📚 PagePal: Document Q&A System
+# PagePal
 
-Welcome to **PagePal**, a powerful document assistant that lets you have conversations with your uploaded files. Ask questions about your documents and get accurate, contextual answers powered by AI.
+Welcome to **PagePal**, your intelligent document assistant designed to help you interact with and explore your uploaded files. With PagePal, you can ask questions about your documents and get precise, contextual answers powered by cutting-edge AI. Whether you're analyzing research papers, reports, or any other type of document, PagePal is here to assist!
 
 
-## 🚀 Features
+## Features
 
 - **Multi-format Support**: Upload and process PDF, DOCX, and TXT files  
 - **Semantic Search**: Find the most relevant content for your questions using vector embeddings  
@@ -23,6 +23,39 @@ Welcome to **PagePal**, a powerful document assistant that lets you have convers
 ## 🛠 Installation
 
 ### 1. Clone this repository:
-```bash
+```
 git clone https://github.com/YOUR_USERNAME/pagepal.git
 cd pagepal
+```
+
+## 2. Install the required Python packages
+```
+pip install -r requirements.txt
+```
+
+## 3. Setup Environment Variables
+ Create a `.env` file with your API keys:
+ ```
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_ENVIRONMENT=your_pinecone_environment
+PINECONE_INDEX_NAME=your_index_name
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+## Usage
+1. Run the application:
+```
+streamlit run app.py
+```
+2. Upload your documents (PDF, DOCX, TXT)
+3. Wait for processing to complete
+4. Start asking questions about your documents
+
+## 📋 Requirements
+
+- Python 3.8+
+- Pinecone account (for vector database)
+- Google Gemini API key
+
+## Notes
+PagePal currently works with digital text documents only. It cannot process handwritten notes, scanned images of text, or screenshots without OCR pre-processing

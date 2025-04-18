@@ -2,7 +2,6 @@
 
 Welcome to **PagePal**, a powerful document assistant that lets you have conversations with your uploaded files. Ask questions about your documents and get accurate, contextual answers powered by AI.
 
----
 
 ## 🚀 Features
 
@@ -12,7 +11,6 @@ Welcome to **PagePal**, a powerful document assistant that lets you have convers
 - **Vector Database Integration**: Efficiently store and retrieve document knowledge  
 - **AI-Powered Responses**: Generate helpful answers using Google's Gemini AI
 
----
 
 ## ⚙️ How It Works
 
@@ -21,8 +19,6 @@ Welcome to **PagePal**, a powerful document assistant that lets you have convers
 3. **Vector Storage**: Embeddings are stored in Pinecone's vector database  
 4. **Semantic Search**: When you ask a question, PagePal finds the most relevant document sections  
 5. **Response Generation**: Google's Gemini AI generates responses based on the retrieved context
-
----
 
 ## 🛠 Installation
 

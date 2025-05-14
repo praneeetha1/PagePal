@@ -4,6 +4,7 @@ langchain
 langchain-community
 docx2txt
 PyPDF2
+pypdf
 sentence-transformers
 pinecone
 google-genai

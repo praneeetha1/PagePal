@@ -12,12 +12,13 @@ load_dotenv()
 class EmbeddingGenerator:
     ## INITIALIZATION
     
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+    def __init__(self, index_name=None, api_key=None, environment=None, model_name='all-MiniLM-L6-v2'):
         self.model = SentenceTransformer(model_name)
         
-        self.api_key = os.getenv('PINECONE_API_KEY')
-        self.environment = os.getenv('PINECONE_ENVIRONMENT')
-        self.index_name = os.getenv('PINECONE_INDEX_NAME')
+        # Use parameters if provided, otherwise fall back to environment variables
+        self.api_key = api_key or os.getenv('PINECONE_API_KEY')
+        self.environment = environment or os.getenv('PINECONE_ENVIRONMENT')
+        self.index_name = index_name or os.getenv('PINECONE_INDEX_NAME')
 
         if not all([self.api_key, self.environment, self.index_name]):
             raise ValueError("Missing Pinecone credentials. Please check your .env file.")

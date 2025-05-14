@@ -34,16 +34,13 @@ def init_session() -> None:
 
 init_session()
 
-def build_prompt(query: str, context: str, chat_history: str) -> str:
+def build_prompt(query: str, context: str) -> str:
     return f"""You are a document expert assistant. Follow these rules:
 1. Answer using the document context when possible
 2. For general knowledge questions, say "Based on general knowledge:"
 3. If unsure, say "This isn't covered in the documents"
 
-Recent conversation:
-{chat_history}
-
-Document context:
+Document Context:
 {context}
 
 Question: {query}
@@ -54,7 +51,7 @@ def build_context(matches: List[Dict], max_words: int = 2000) -> str:
     if not matches:
         return "no_relevant_context"
     
-    MIN_SCORE = 0.18  # Lowered threshold for better recall
+    MIN_SCORE = 0.15  # Lower similarity threshold
     relevant_matches = [
         m for m in matches 
         if (getattr(m, 'score', 0) >= MIN_SCORE) or 
@@ -73,25 +70,20 @@ def build_context(matches: List[Dict], max_words: int = 2000) -> str:
         total_words += len(words)
     return "\n".join(context) if context else "no_relevant_context"
 
-def expand_query(query: str, history: List[Dict]) -> str:
-    """Add context from previous 2 user messages"""
-    prev_queries = [msg["content"] for msg in history[-3:] if msg["role"] == "user"]
-    return " ".join(prev_queries[-2:] + [query])
-
-def generate_response(query: str, context: str, chat_history: str) -> str:
+def generate_response(query: str, context: str) -> str:
     try:
         if context == "no_relevant_context":
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
-                contents=f"Answer like a helpful assistant: {query}",
+                contents=f"Answer concisely: {query}",
                 config=types.GenerateContentConfig(
                     response_modalities=["Text"],
                     temperature=0.5
                 )
             )
-            return f"{response.text.strip()}"
+            return f"Based on general knowledge: {response.text.strip()}"
             
-        prompt = build_prompt(query, context, chat_history)
+        prompt = build_prompt(query, context)
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt,
@@ -105,8 +97,8 @@ def generate_response(query: str, context: str, chat_history: str) -> str:
         return f"Error processing request: {str(e)}"
 
 def main():
-    st.title("📚 Document Assistant")
-    st.markdown("Upload documents & ask questions. I'll use them when possible!")
+    st.title("📚 PagePal: Document Assistant")
+    st.markdown("Upload documents & ask questions")
     
     # File processing
     uploaded_files = st.file_uploader(
@@ -144,7 +136,9 @@ def main():
     # Chat interface
     if st.session_state.processed:
         st.subheader("Chat")
-        for msg in st.session_state.chat_history[-5:]:
+        
+        # Display full chat history
+        for msg in st.session_state.chat_history:
             st.chat_message(msg["role"]).write(msg["content"])
 
         if st.button("Clear All Data"):
@@ -154,32 +148,32 @@ def main():
             st.rerun()
 
         if prompt := st.chat_input("Ask about your documents..."):
+            # Add user message to history and display immediately
             st.session_state.chat_history.append({"role": "user", "content": prompt})
+            st.chat_message("user").write(prompt)
             
-            with st.spinner("Researching..."):
+            # Generate response
+            with st.chat_message("assistant"):
                 try:
-                    # Enhanced query with conversation context
-                    expanded_query = expand_query(prompt, st.session_state.chat_history)
-                    
-                    # Retrieve document context
+                    # Retrieve context
                     results = st.session_state.embedding_generator.query_embeddings(
-                        query=expanded_query,
-                        top_k=8,  # Increased from 5
+                        query=prompt,
+                        top_k=8,
                         filter_dict={"user_id": st.session_state.user_id}
                     )
-                    matches = [m for m in results.get("matches", []) if m.get('score', 0) >= 0.15]
+                    matches = results.get("matches", [])
                     doc_context = build_context(matches)
                     
-                    # Generate response
-                    chat_history = "\n".join(
-                        [f"{msg['role']}: {msg['content']}" 
-                         for msg in st.session_state.chat_history[-3:]]
-                    )
-                    response = generate_response(prompt, doc_context, chat_history)
+                    # Generate and display response
+                    response = generate_response(prompt, doc_context)
+                    st.write(response)
                     
+                    # Add to history after successful generation
                     st.session_state.chat_history.append({"role": "assistant", "content": response})
                 except Exception as e:
-                    st.error(f"Error processing request: {str(e)}")
+                    error_msg = f"Error: {str(e)}"
+                    st.write(error_msg)
+                    st.session_state.chat_history.append({"role": "assistant", "content": error_msg})
 
 if __name__ == "__main__":
     main()

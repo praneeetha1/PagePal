@@ -6,4 +6,4 @@ docx2txt
 PyPDF2
 sentence-transformers
 pinecone
-google-generativeai
+google-genai

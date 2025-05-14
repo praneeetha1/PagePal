@@ -20,7 +20,6 @@ def init_session():
         random_id = str(uuid.uuid4())
         st.session_state.user_id = f"user_{random_id[:8]}"
     if "embedding_generator" not in st.session_state:
-        # Use a shared index for all users, filter by user_id in metadata
         index_name = "pagepal-shared"
         st.session_state.embedding_generator = EmbeddingGenerator(
             index_name=index_name,
@@ -46,19 +45,47 @@ Answer in clear, concise English. If unsure, say you don't know. Do not mention 
 Answer:"""
 
 def build_context(matches, max_words=1500):
+    if not matches:
+        return "no_relevant_context"
+    
+    MIN_SCORE = 0.25  # Adjust this threshold as needed
+    relevant_matches = [m for m in matches if m['score'] >= MIN_SCORE]
+    
+    if not relevant_matches:
+        return "no_relevant_context"
+    
     context = []
     total_words = 0
-    for match in matches:
-        text = match['metadata'].get('text', '')
+    for match in relevant_matches:
+        text = match.metadata.get('text', '')
         words = text.split()
         if total_words + len(words) > max_words:
             break
         context.append(f"Document excerpt: {text}")
         total_words += len(words)
-    return "\n".join(context)
+    return "\n".join(context) if context else "no_relevant_context"
+
+def answer_general_question(query: str) -> str:
+    """Handle questions outside document context"""
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=f"""Answer the following question in clear, concise English.
+            If you don't know, say so. Question: {query}""",
+            config=types.GenerateContentConfig(
+                response_modalities=["Text"],
+                temperature=0.5
+            )
+        )
+        return f"{response.text.strip()}\n\n*(General knowledge answer)*"
+    except Exception as e:
+        return f"Error generating response: {str(e)}"
 
 def generate_response(query: str, context: str) -> str:
     try:
+        if context == "no_relevant_context":
+            return answer_general_question(query)
+            
         prompt = build_prompt(query, context)
         response = client.models.generate_content(
             model="gemini-2.0-flash",
@@ -70,11 +97,12 @@ def generate_response(query: str, context: str) -> str:
         )
         return response.text.strip()
     except Exception as e:
-        return f"Error generating response: {str(e)}"
+        print(f"Gemini Error: {str(e)}")
+        return "I encountered an error processing your request. Please try again."
 
 def main():
-    st.title("📚 Document Q&A System")
-    st.markdown("Upload documents and ask questions. Each user has their own isolated workspace.")
+    st.title("📚 PagePal - your friendly  document assistant!")
+    st.markdown("Upload documents and ask questions about them.")
 
     uploaded_files = st.file_uploader(
         "Upload your study materials (PDF/DOCX/TXT)",
@@ -88,6 +116,7 @@ def main():
                 with tempfile.TemporaryDirectory() as temp_dir:
                     all_texts = []
                     all_metadata = []
+                    print(f"Processing {len(uploaded_files)} files for user {st.session_state.user_id}")
                     for file in uploaded_files:
                         file_path = os.path.join(temp_dir, file.name)
                         with open(file_path, "wb") as f:
@@ -102,14 +131,19 @@ def main():
                             all_texts.append(chunk.page_content)
                             all_metadata.append({
                                 **chunk.metadata,
-                                "user_id": st.session_state.user_id
+                                "user_id": st.session_state.user_id,
+                                "document_id": str(uuid.uuid4())
                             })
-                    st.session_state.embedding_generator.store_embeddings(
-                        all_texts,
-                        all_metadata
-                    )
-                    st.session_state.processed = True
-                    st.success(f"Processed {len(all_texts)} document chunks!")
+                    if all_texts:
+                        print(f"First document metadata: {all_metadata[0] if all_metadata else 'None'}")
+                        st.session_state.embedding_generator.store_embeddings(
+                            all_texts,
+                            all_metadata
+                        )
+                        st.session_state.processed = True
+                        st.success(f"Processed {len(all_texts)} document chunks!")
+                    else:
+                        st.error("No valid text extracted from uploaded files.")
             except Exception as e:
                 st.error(f"Processing failed: {str(e)}")
 
@@ -118,17 +152,29 @@ def main():
         for msg in st.session_state.chat_history:
             st.chat_message(msg["role"]).write(msg["content"])
 
-        if prompt := st.chat_input("Ask about your documents:"):
+        if st.button("Clear Documents & Restart"):
+            st.session_state.embedding_generator.delete_all()
+            st.session_state.processed = False
+            st.session_state.chat_history = []
+            st.rerun()
+
+        if prompt := st.chat_input("Ask about your documents or anything else:"):
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
             with st.spinner("Analyzing..."):
-                results = st.session_state.embedding_generator.query_embeddings(
-                    query=prompt,
-                    top_k=3,
-                    filter_dict={"user_id": st.session_state.user_id}
-                )
-                context = build_context(results.get("matches", []))
-                response = generate_response(prompt, context)
+                try:
+                    results = st.session_state.embedding_generator.query_embeddings(
+                        query=prompt,
+                        top_k=5,
+                        filter_dict={"user_id": st.session_state.user_id},
+                        include_values=True
+                    )
+                    matches = results.get("matches", [])
+                    context = build_context(matches)
+                    response = generate_response(prompt, context)
+                except Exception as e:
+                    response = f"Error processing request: {str(e)}"
+                
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
                 st.chat_message("assistant").write(response)
 

@@ -57,6 +57,7 @@ class EmbeddingGenerator:
             metadata = {"text": text}
             if metadata_list and i < len(metadata_list):
                 metadata.update(metadata_list[i])
+            print(f"Storing vector with metadata: {metadata}")  # Debug
             vectors_to_upsert.append({
                 "id": str(uuid.uuid4()),
                 "values": embedding.tolist(),
@@ -81,6 +82,7 @@ class EmbeddingGenerator:
                 include_metadata=True,
                 filter=filter_dict
             )
+            print("Pinecone Results:", results)  # Debug
             return results
         except Exception as e:
             print(f"Error querying Pinecone: {e}")

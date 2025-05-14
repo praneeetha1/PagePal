@@ -20,9 +20,10 @@ client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 # Session state initialization
 def init_session():
     if "user_id" not in st.session_state:
-        # Create unique user ID using session hash
-        session_id = hash(st.runtime.get_instance_id())
-        st.session_state.user_id = f"user_{session_id}"
+        # Create a unique user ID using a random string
+        import uuid
+        random_id = str(uuid.uuid4())
+        st.session_state.user_id = f"user_{random_id[:8]}"  # Use first 8 chars for brevity
     
     if "embedding_generator" not in st.session_state:
         # Create unique Pinecone index per user

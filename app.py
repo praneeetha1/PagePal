@@ -1,4 +1,3 @@
-#app.py
 import os
 import streamlit as st
 from processing.document import extract_text, split_documents
@@ -48,8 +47,11 @@ def build_context(matches, max_words=1500):
     if not matches:
         return "no_relevant_context"
     
-    MIN_SCORE = 0.25  # Adjust this threshold as needed
-    relevant_matches = [m for m in matches if m['score'] >= MIN_SCORE]
+    MIN_SCORE = 0.25
+    relevant_matches = [
+        m for m in matches 
+        if getattr(m, 'score', 0) >= MIN_SCORE or (isinstance(m, dict) and m.get('score', 0) >= MIN_SCORE)
+    ]
     
     if not relevant_matches:
         return "no_relevant_context"
@@ -57,7 +59,15 @@ def build_context(matches, max_words=1500):
     context = []
     total_words = 0
     for match in relevant_matches:
-        text = match.metadata.get('text', '')
+        # Handle different Pinecone response formats
+        if hasattr(match, 'metadata'):
+            metadata = match.metadata
+        elif isinstance(match, dict):
+            metadata = match.get('metadata', {})
+        else:
+            continue
+            
+        text = metadata.get('text', '')
         words = text.split()
         if total_words + len(words) > max_words:
             break
@@ -101,8 +111,8 @@ def generate_response(query: str, context: str) -> str:
         return "I encountered an error processing your request. Please try again."
 
 def main():
-    st.title("📚 PagePal - your friendly  document assistant!")
-    st.markdown("Upload documents and ask questions about them.")
+    st.title("📚 PagePal - Your Friendly Document Assistant!")
+    st.markdown("Upload documents and ask questions. I can also answer general knowledge questions!")
 
     uploaded_files = st.file_uploader(
         "Upload your study materials (PDF/DOCX/TXT)",
@@ -116,7 +126,6 @@ def main():
                 with tempfile.TemporaryDirectory() as temp_dir:
                     all_texts = []
                     all_metadata = []
-                    print(f"Processing {len(uploaded_files)} files for user {st.session_state.user_id}")
                     for file in uploaded_files:
                         file_path = os.path.join(temp_dir, file.name)
                         with open(file_path, "wb") as f:
@@ -135,7 +144,6 @@ def main():
                                 "document_id": str(uuid.uuid4())
                             })
                     if all_texts:
-                        print(f"First document metadata: {all_metadata[0] if all_metadata else 'None'}")
                         st.session_state.embedding_generator.store_embeddings(
                             all_texts,
                             all_metadata

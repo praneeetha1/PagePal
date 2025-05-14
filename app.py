@@ -60,7 +60,6 @@ def build_context(matches, max_words=1500):
     context = []
     total_words = 0
     for match in relevant_matches:
-        # Handle different Pinecone response formats
         if hasattr(match, 'metadata'):
             metadata = match.metadata
         elif isinstance(match, dict):
@@ -77,7 +76,6 @@ def build_context(matches, max_words=1500):
     return "\n".join(context) if context else "no_relevant_context"
 
 def answer_general_question(query: str) -> str:
-    """Handle questions outside document context"""
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
@@ -88,7 +86,7 @@ def answer_general_question(query: str) -> str:
                 temperature=0.5
             )
         )
-        return f"{response.text.strip()}\n\n*(General knowledge answer)*"
+        return response.text.strip()
     except Exception as e:
         return f"Error generating response: {str(e)}"
 
@@ -96,7 +94,6 @@ def generate_response(query: str, context: str) -> str:
     try:
         if context == "no_relevant_context":
             return answer_general_question(query)
-            
         prompt = build_prompt(query, context)
         response = client.models.generate_content(
             model="gemini-2.0-flash",
@@ -110,6 +107,28 @@ def generate_response(query: str, context: str) -> str:
     except Exception as e:
         print(f"Gemini Error: {str(e)}")
         return "I encountered an error processing your request. Please try again."
+
+def get_all_user_chunks(embedding_generator, user_id, max_chunks=100, max_chars=12000):
+    """Get all text chunks for a user, up to max_chunks and max_chars."""
+    index = embedding_generator.index
+    # Use a generic query vector (e.g., for "summary")
+    dummy_vector = embedding_generator.generate_query_embedding("summary").tolist()
+    results = index.query(
+        vector=dummy_vector,
+        top_k=max_chunks,
+        include_metadata=True,
+        filter={"user_id": user_id}
+    )
+    all_texts = []
+    total_chars = 0
+    for match in results.get("matches", []):
+        meta = match.get("metadata", {})
+        text = meta.get("text", "")
+        if total_chars + len(text) > max_chars:
+            break
+        all_texts.append(text)
+        total_chars += len(text)
+    return "\n".join(all_texts)
 
 def main():
     st.title("📚 PagePal - Your Friendly Document Assistant!")
@@ -172,14 +191,32 @@ def main():
             st.chat_message("user").write(prompt)
             with st.spinner("Analyzing..."):
                 try:
-                    results = st.session_state.embedding_generator.query_embeddings(
-                        query=prompt,
-                        top_k=5,
-                        filter_dict={"user_id": st.session_state.user_id}
-                    )
-                    matches = results.get("matches", [])
-                    context = build_context(matches)
-                    response = generate_response(prompt, context)
+                    # Special handling for summarization requests
+                    prompt_lower = prompt.strip().lower()
+                    if any(
+                        s in prompt_lower
+                        for s in [
+                            "summarise", "summarize",
+                            "summarise the document", "summarize the document",
+                            "summarise the entire document", "summarize the entire document"
+                        ]
+                    ):
+                        context = get_all_user_chunks(
+                            st.session_state.embedding_generator,
+                            st.session_state.user_id,
+                            max_chunks=100,
+                            max_chars=12000
+                        )
+                        response = generate_response(prompt, context)
+                    else:
+                        results = st.session_state.embedding_generator.query_embeddings(
+                            query=prompt,
+                            top_k=5,
+                            filter_dict={"user_id": st.session_state.user_id}
+                        )
+                        matches = results.get("matches", [])
+                        context = build_context(matches)
+                        response = generate_response(prompt, context)
                 except Exception as e:
                     response = f"Error processing request: {str(e)}"
                 

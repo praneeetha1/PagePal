@@ -5,5 +5,5 @@ langchain-community
 docx2txt
 PyPDF2
 sentence-transformers
-pinecone-client
+pinecone
 google-generativeai

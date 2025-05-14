@@ -89,7 +89,7 @@ def generate_response(query: str, context: str, chat_history: str) -> str:
                     temperature=0.5
                 )
             )
-            return f"Based on general knowledge: {response.text.strip()}"
+            return f"{response.text.strip()}"
             
         prompt = build_prompt(query, context, chat_history)
         response = client.models.generate_content(

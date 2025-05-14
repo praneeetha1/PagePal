@@ -73,7 +73,7 @@ class EmbeddingGenerator:
                 print(f"Error upserting batch: {e}")
         print(f"Successfully stored {len(texts)} embeddings in Pinecone")
 
-    def query_embeddings(self, query, top_k=5, filter_dict=None, include_values=False):
+    def query_embeddings(self, query, top_k=5, filter_dict=None):
         """Query Pinecone with a text input and get the most relevant results"""
         query_embedding = self.generate_query_embedding(query)
         try:
@@ -81,7 +81,6 @@ class EmbeddingGenerator:
                 vector=query_embedding.tolist(),
                 top_k=top_k,
                 include_metadata=True,
-                include_values=include_values,  # Add this line
                 filter=filter_dict
             )
             print("Pinecone Results:", results)

@@ -1,3 +1,4 @@
+#app.py
 import os
 import streamlit as st
 from processing.document import extract_text, split_documents
@@ -174,8 +175,7 @@ def main():
                     results = st.session_state.embedding_generator.query_embeddings(
                         query=prompt,
                         top_k=5,
-                        filter_dict={"user_id": st.session_state.user_id},
-                        include_values=True
+                        filter_dict={"user_id": st.session_state.user_id}
                     )
                     matches = results.get("matches", [])
                     context = build_context(matches)

@@ -1,7 +1,12 @@
 # PagePal
 
-Welcome to **PagePal**, your intelligent document assistant designed to help you interact with and explore your uploaded files. With PagePal, you can ask questions about your documents and get precise, contextual answers powered by cutting-edge AI. Whether you're analyzing research papers, reports, or any other type of document, PagePal is here to assist!
+Welcome to **PagePal**, your intelligent document assistant designed to help you interact with and explore your uploaded files. With PagePal, you can ask questions about your documents and get precise, contextual answers.
 
+## 🚀 Live Demo
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ihaveexamtomo.streamlit.app/)
+
+Try the app live: [https://ihaveexamtomo.streamlit.app/](https://ihaveexamtomo.streamlit.app/)
 
 ## Features
 

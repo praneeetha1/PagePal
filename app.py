@@ -1,20 +1,12 @@
-# app.py
-
-import torch
-torch.set_default_device('cpu')
-
 import os
 import streamlit as st
 from processing.document import extract_text, split_documents
 from processing.embeddings import EmbeddingGenerator
-# from google import genai
-# from google.genai import types, GenerationConfig
 import google.generativeai as genai
-from google.generativeai import GenerationConfig  # ✅ Correct import
+from google.generativeai.types import GenerationConfig
 import tempfile
 import uuid
 from typing import List, Dict
-
 
 # Initialize Google Gemini API
 if "GEMINI_API_KEY" not in st.secrets:
@@ -30,9 +22,9 @@ def init_session() -> None:
             index_name="pagepal-shared",
             api_key=st.secrets.get("PINECONE_API_KEY")
         ),
-        "chat_history": [],
         "processed": False,
-        "uploaded_files": []
+        "uploaded_files": [],
+        "messages": []  # Stores chat history
     }
     for key, value in session_defaults.items():
         if key not in st.session_state:
@@ -138,27 +130,30 @@ def main():
                         st.session_state.processed = True
                         st.success(f"Processed {len(all_texts)} sections!")
                         st.session_state.uploaded_files = [f.name for f in uploaded_files]
+                        st.rerun()  # Force refresh to show chat
             except Exception as e:
                 st.error(f"Processing failed: {str(e)}")
 
-    # Chat interface
+    # Chat interface - Only shown after processing
     if st.session_state.processed:
         st.subheader("Chat")
         
         # Display chat history
-        for msg in st.session_state.chat_history:
-            st.chat_message(msg["role"]).write(msg["content"])
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-        if st.button("Clear All Data"):
+        # Clear data button
+        if st.button("❌ Clear All Data"):
             st.session_state.embedding_generator.delete_all()
             st.session_state.processed = False
-            st.session_state.chat_history = []
+            st.session_state.messages = []
             st.rerun()
 
+        # Chat input
         if prompt := st.chat_input("Ask about your documents..."):
-            # Add user message
-            st.session_state.chat_history.append({"role": "user", "content": prompt})
-            st.chat_message("user").write(prompt)
+            # Add user message to history
+            st.session_state.messages.append({"role": "user", "content": prompt})
             
             # Generate response
             with st.chat_message("assistant"):
@@ -172,20 +167,17 @@ def main():
                     matches = results.get("matches", [])
                     doc_context = build_context(matches)
                     
-                    # Generate and display
-                    response = generate_response(prompt, doc_context)
-                    st.write(response)
+                    # Generate and display response
+                    with st.spinner("Analyzing documents..."):
+                        response = generate_response(prompt, doc_context)
+                        st.markdown(response)
                     
-                    # Add to history
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": response}
-                    )
+                    # Add assistant response to history
+                    st.session_state.messages.append({"role": "assistant", "content": response})
                 except Exception as e:
                     error_msg = f"Error: {str(e)}"
-                    st.write(error_msg)
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": error_msg}
-                    )
+                    st.error(error_msg)
+                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
 if __name__ == "__main__":
     main()

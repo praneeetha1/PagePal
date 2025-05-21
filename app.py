@@ -139,7 +139,7 @@ def main():
             st.session_state.embedding_generator.delete_all()
             st.session_state.processed = False
             st.session_state.messages = []
-            st.rerun()
+            pass
 
         # Chat input
         if prompt := st.chat_input("Ask about your documents..."):

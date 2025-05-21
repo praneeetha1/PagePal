@@ -7,7 +7,12 @@ import time
 
 class EmbeddingGenerator:
     def __init__(self, index_name=None, api_key=None, environment=None, model_name='all-MiniLM-L6-v2'):
-        self.model = SentenceTransformer(model_name)
+        import torch
+        if torch.cuda.is_available():
+            self.device = 'cuda'
+        else:
+            self.device = 'cpu'
+        self.model = SentenceTransformer(model_name, device = self.device)
         self.api_key = api_key or os.environ.get("PINECONE_API_KEY")
         self.environment = environment or os.environ.get("PINECONE_ENVIRONMENT")
         self.index_name = index_name or "pagepal-shared"

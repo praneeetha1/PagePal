@@ -7,5 +7,5 @@ PyPDF2
 pypdf
 pinecone
 google-genai
-torch==2.3.0
+torch==2.7.0
 sentence-transformers==3.0.0

@@ -1,5 +1,8 @@
 # app.py
 
+import torch
+torch.set_default_device('cpu')
+
 import os
 import streamlit as st
 from processing.document import extract_text, split_documents
@@ -9,6 +12,7 @@ from google.genai import types, GenerationConfig
 import tempfile
 import uuid
 from typing import List, Dict
+
 
 # Initialize Google Gemini API
 if "GEMINI_API_KEY" not in st.secrets:

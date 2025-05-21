@@ -129,7 +129,6 @@ def main():
                         st.session_state.processed = True
                         st.success(f"Processed {len(all_texts)} sections!")
                         st.session_state.uploaded_files = [f.name for f in uploaded_files]
-                        st.rerun()  # Force refresh to show chat
             except Exception as e:
                 st.error(f"Processing failed: {str(e)}")
 

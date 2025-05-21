@@ -5,6 +5,7 @@ langchain-community
 docx2txt
 PyPDF2
 pypdf
-sentence-transformers
 pinecone
 google-genai
+torch==2.3.0
+sentence-transformers==3.0.0

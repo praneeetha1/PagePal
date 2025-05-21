@@ -2,7 +2,6 @@ import os
 import streamlit as st
 from processing.document import extract_text, split_documents
 from processing.embeddings import EmbeddingGenerator
-from processing.conversation import build_conversation_prompt
 import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 import tempfile
@@ -33,14 +32,29 @@ def init_session() -> None:
 
 init_session()
 
+def build_prompt(query: str, context: str) -> str:
+    return f"""You are a document expert assistant. Follow these rules:
+1. Answer using the document context when possible
+2. For general knowledge questions, say "Based on general knowledge:"
+3. If unsure, say "This isn't covered in the documents"
+
+Document Context:
+{context}
+
+Question: {query}
+
+Answer:"""
+
 def build_context(matches: List[Dict], max_words: int = 2000) -> str:
     if not matches:
         return "no_relevant_context"
+    
     MIN_SCORE = 0.15
     relevant_matches = [
         m for m in matches 
         if (m.get('score', 0) >= MIN_SCORE)
     ]
+    
     context = []
     total_words = 0
     for match in relevant_matches:
@@ -53,10 +67,18 @@ def build_context(matches: List[Dict], max_words: int = 2000) -> str:
         total_words += len(words)
     return "\n".join(context) if context else "no_relevant_context"
 
-def generate_response(chat_history, query: str, context: str) -> str:
+def generate_response(query: str, context: str) -> str:
     try:
         model = genai.GenerativeModel('gemini-2.0-flash-001')
-        prompt = build_conversation_prompt(chat_history, query, context, max_turns=3)
+        
+        if context == "no_relevant_context":
+            response = model.generate_content(
+                f"Answer concisely: {query}",
+                generation_config=GenerationConfig(temperature=0.5)
+            )
+            return f"Based on general knowledge: {response.text.strip()}"
+            
+        prompt = build_prompt(query, context)
         response = model.generate_content(
             prompt,
             generation_config=GenerationConfig(temperature=0.3)
@@ -64,6 +86,7 @@ def generate_response(chat_history, query: str, context: str) -> str:
         return response.text.strip()
     except Exception as e:
         return f"Error: {str(e)}"
+
 
 def main():
     st.title("📚 PagePal: Document Assistant")
@@ -87,8 +110,10 @@ def main():
                         file_path = os.path.join(temp_dir, file.name)
                         with open(file_path, "wb") as f:
                             f.write(file.getbuffer())
+                        
                         docs = extract_text(file_path)
                         chunks = split_documents(docs)
+                        
                         for chunk in chunks:
                             all_texts.append(chunk.page_content)
                             all_metadata.append({
@@ -96,6 +121,7 @@ def main():
                                 "user_id": st.session_state.user_id,
                                 "document_id": str(uuid.uuid4())
                             })
+                    
                     if all_texts:
                         st.session_state.embedding_generator.store_embeddings(
                             all_texts, all_metadata
@@ -140,9 +166,9 @@ def main():
                     matches = results.get("matches", [])
                     doc_context = build_context(matches)
                     
-                    # Generate and display response with conversation memory
+                    # Generate and display response
                     with st.spinner("Analyzing documents..."):
-                        response = generate_response(st.session_state.messages, prompt, doc_context)
+                        response = generate_response(prompt, doc_context)
                         st.markdown(response)
                     
                     # Add assistant response to history

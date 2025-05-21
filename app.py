@@ -69,25 +69,24 @@ def build_context(matches: List[Dict], max_words: int = 2000) -> str:
 
 def generate_response(query: str, context: str) -> str:
     try:
+        model = genai.GenerativeModel('gemini-pro')
+        
         if context == "no_relevant_context":
-            response = genai.generate_content(
+            response = model.generate_content(
                 f"Answer concisely: {query}",
-                generation_config=GenerationConfig(
-                    temperature=0.5
-                )
+                generation_config=GenerationConfig(temperature=0.5)
             )
             return f"Based on general knowledge: {response.text.strip()}"
             
         prompt = build_prompt(query, context)
-        response = genai.generate_content(
+        response = model.generate_content(
             prompt,
-            generation_config=GenerationConfig(
-                temperature=0.3
-            )
+            generation_config=GenerationConfig(temperature=0.3)
         )
         return response.text.strip()
     except Exception as e:
         return f"Error: {str(e)}"
+
 
 def main():
     st.title("📚 PagePal: Document Assistant")

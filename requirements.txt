@@ -7,6 +7,6 @@ PyPDF2
 pypdf
 pinecone
 # google-genai
-google.generativeai
+google-generativeai
 torch==2.7.0
 sentence-transformers==3.0.0

@@ -7,8 +7,10 @@ import os
 import streamlit as st
 from processing.document import extract_text, split_documents
 from processing.embeddings import EmbeddingGenerator
-from google import genai
-from google.genai import types, GenerationConfig
+# from google import genai
+# from google.genai import types, GenerationConfig
+import google.generativeai as genai
+from google.generativeai import GenerationConfig  # ✅ Correct import
 import tempfile
 import uuid
 from typing import List, Dict

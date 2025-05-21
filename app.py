@@ -69,7 +69,7 @@ def build_context(matches: List[Dict], max_words: int = 2000) -> str:
 
 def generate_response(query: str, context: str) -> str:
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.0-flash-001')
         
         if context == "no_relevant_context":
             response = model.generate_content(
